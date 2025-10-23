@@ -8,6 +8,25 @@ from    quotefix.messagetypes       import *
 from    quotefix.attributionclasses import *
 import  re, platform, traceback
 
+
+def _is_yosemite_or_later():
+    """Return True on macOS 10.10 (Yosemite) and all newer versions.
+
+    Big Sur (11) and later changed the versioning scheme to major >= 11,
+    so simply checking the minor version of 10.x breaks on modern macOS.
+    This helper handles both schemes robustly.
+    """
+    try:
+        version_string = platform.mac_ver()[0] or ''
+        parts = [int(p) for p in version_string.split('.') if p.isdigit()]
+        major = parts[0] if len(parts) > 0 else 0
+        minor = parts[1] if len(parts) > 1 else 0
+        # Yosemite is 10.10; any major > 10 is also newer
+        return (major > 10) or (major == 10 and minor >= 10)
+    except Exception:
+        # If detection fails, assume modern macOS to keep behavior correct.
+        return True
+
 # Mavericks
 try:
     Message = lookUpClass('MCMessage')
@@ -160,9 +179,8 @@ class CustomizedAttribution:
         root = dom.documentElement()
         html = root.innerHTML()
 
-        # Fix attributions for Yosemite and up
-        osMinorVersion = int(platform.mac_ver()[0].split('.')[1])
-        if osMinorVersion >= 10:
+        # Fix attributions for Yosemite and up (robust for 11+ and newer)
+        if _is_yosemite_or_later():
             # move <blockquote> one level down
             html = re.sub(r'(?i)(<blockquote.*?>)(.*?)(<br.*?>)+', r'\2\1', html, count = 1)
 
